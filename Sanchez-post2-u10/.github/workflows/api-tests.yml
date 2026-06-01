@@ -1,0 +1,57 @@
+name: API Tests con Newman
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  api-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout del repositorio
+      - name: Checkout codigo
+        uses: actions/checkout@v4
+
+      # 2. Configurar Java 17
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: maven
+
+      # 3. Compilar el JAR sin ejecutar tests
+      - name: Compilar JAR
+        run: mvn -B package -DskipTests
+
+      # 4. Iniciar la aplicación Spring Boot en segundo plano
+      - name: Iniciar aplicacion Spring Boot
+        run: java -jar target/*.jar &
+
+      # 5. Esperar que la app responda (health check con reintentos)
+      - name: Esperar que la app este lista
+        run: |
+          echo "Esperando que Spring Boot arranque..."
+          for i in {1..20}; do
+            if curl -sf http://localhost:8080/actuator/health; then
+              echo "App lista!"
+              break
+            fi
+            echo "Intento $i - esperando 3 segundos..."
+            sleep 3
+          done
+
+      # 6. Instalar Newman
+      - name: Instalar Newman
+        run: npm install -g newman
+
+      # 7. Ejecutar coleccion Postman con Newman
+      - name: Ejecutar pruebas API con Newman
+        run: |
+          newman run postman/ColeccionToDo.json \
+            --environment postman/env-ci.json \
+            --reporters cli \
+            --reporter-cli-no-banner
