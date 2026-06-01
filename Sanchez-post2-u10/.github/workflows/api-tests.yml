@@ -31,7 +31,7 @@ jobs:
       - name: Iniciar aplicacion Spring Boot
         run: java -jar target/*.jar &
 
-      # 5. Esperar que la app responda (health check con reintentos)
+      # 5. Esperar que la app responda
       - name: Esperar que la app este lista
         run: |
           echo "Esperando que Spring Boot arranque..."
